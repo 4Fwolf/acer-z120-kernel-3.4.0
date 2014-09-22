@@ -1,0 +1,11 @@
+#mount mtd partitions
+     #mount custpack
+     mkdir /custpack
+     mount ext4 emmc@custpack wait commit=1,noauto_da_alloc
+
+     #mount mobile_info
+     mkdir /mobile_info
+     mount ext4 emmc@mobile_info /mobile_info wait commit=1,noauto_da_alloc
+     chown system system /mobile_info
+     chmod 0711 /mobile_info 
+

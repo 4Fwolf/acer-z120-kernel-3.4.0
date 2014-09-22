@@ -1,0 +1,48 @@
+#!/system/bin/sh
+
+export PATH=/system/bin:$PATH
+
+USERDATA_DEVICE=/dev/block/mmcblk0p7
+MISC_DEVICE=/dev/misc
+LOG_FILE=/data_comp.log
+MES_ONGOING=ongoing
+MES_DONE=done
+
+function log() {
+	#echo $1 >> ${LOG_FILE}
+}
+
+function fmt_data() {
+	#rewrite flag for sure
+	echo ${MES_ONGOING} | /system/bin/dd of=${MISC_PARTITION} seek=200 bs=1 count=10
+	
+	#format user data partition
+	log "data format start"
+	/system/bin/make_ext4fs -a /data -w ${USERDATA_DEVICE}
+
+	if [ $? -lt 0 ]; then
+		/system/bin/reboot;
+	fi
+	if [ $? -eq 0 ]; then
+		log "data format done";
+		echo ${MES_DONE} | /system/bin/dd of=${MISC_PARTITION} seek=200 bs=1 count=10;
+	fi
+}
+
+#check flag
+if [ "`/system/bin/dd if=${MISC_DEVICE} bs=1 count=10 skip=200 2> /dev/null`" == "$MES_ONGOING" ] ; then
+	log "may lose power on previous format";
+	fmt_data;
+fi
+if [ "`/system/bin/dd if=${MISC_DEVICE} bs=1 count=10 skip=200 2> /dev/null`" == "$MES_DONE" ] ; then
+	exit 0;
+fi
+
+#no file system
+if [ -z "`/system/bin/dd if=${USERDATA_DEVICE} bs=1 count=2 skip=1080 2> /dev/null`" ] || [ $'\xff'$'\xff' == "`/system/bin/dd if=${USERDATA_DEVICE} bs=1 count=2 skip=1080 2> /dev/null`" ]; then
+	fmt_data;
+else
+	log "do not touch data";
+fi
+
+exit 0
